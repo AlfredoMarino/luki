@@ -1,0 +1,15 @@
+[project]
+name = "LUKI"
+version = "0.1.0"
+description = "Lightweight Unsupervised Knowledge from Images — personal photo collection analysis with PyTorch, CLIP and DINOv2"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = ["pytest", "black", "ruff"]
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"]

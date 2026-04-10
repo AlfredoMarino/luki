@@ -1,0 +1,4 @@
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  supported_extensions: [".jpg", ".jpeg", ".png", ".tiff"]
