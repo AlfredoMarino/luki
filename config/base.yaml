@@ -2,3 +2,15 @@ data:
   raw_dir: "data/raw"
   processed_dir: "data/processed"
   supported_extensions: [".jpg", ".jpeg", ".png", ".tiff"]
+
+embeddings:
+  model_name: "facebook/dinov3-vitl16-pretrain-lvd1689m"
+  batch_size: 8
+  device: "auto"        # auto | cpu | cuda
+  normalize: true       # L2-normalizar antes de guardar
+
+qdrant:
+  url: "http://localhost:6334"   # gRPC
+  collection_name: "luki_photos"
+  vector_size: 1024
+  distance: "Cosine"

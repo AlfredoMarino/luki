@@ -1,0 +1,10 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    container_name: luki-qdrant
+    ports:
+      - "6333:6333"   # REST API (dashboard web + debugging)
+      - "6334:6334"   # gRPC (cliente Python por defecto)
+    volumes:
+      - ./data/qdrant:/qdrant/storage
+    restart: unless-stopped

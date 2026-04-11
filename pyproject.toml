@@ -1,11 +1,28 @@
 [project]
 name = "LUKI"
 version = "0.1.0"
-description = "Lightweight Unsupervised Knowledge from Images — personal photo collection analysis with PyTorch, CLIP and DINOv2"
+description = "Lightweight Unsupervised Knowledge from Images — personal photo collection analysis with PyTorch, CLIP and DINOv3"
 requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0",
+    "torchvision",
+    "transformers>=4.44",
+    "pillow",
+    "pyarrow",
+    "pandas",
+    "pyyaml",
+    "numpy",
+    "qdrant-client>=1.12",
+    "tqdm",
+]
 
 [project.optional-dependencies]
-dev = ["pytest", "black", "ruff"]
+dev = ["pytest", "black", "ruff", "nbclient", "nbformat"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: tests that load the real DINOv3 model (~1.2GB, ~15s cold).",
+]
 
 [tool.black]
 line-length = 88
