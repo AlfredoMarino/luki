@@ -34,7 +34,10 @@ _GPS_LONGITUDE = 4
 _GPS_LONGITUDE_REF = 3
 
 
-def extract_metadata(image_path: Path) -> Optional[dict[str, Any]]:
+def extract_metadata(
+    image_path: Path,
+    raw_dir: Path | None = None,
+) -> Optional[dict[str, Any]]:
     """
     Extracts all available metadata from an image file.
 
@@ -45,6 +48,10 @@ def extract_metadata(image_path: Path) -> Optional[dict[str, Any]]:
 
     Args:
         image_path: absolute path to the image
+        raw_dir:    root directory of raw photos. If provided, the manifest
+                    stores a portable ``relative_path`` instead of an
+                    absolute one. Pass ``None`` to fall back to an absolute
+                    path (legacy behaviour).
 
     Returns:
         dict with all metadata fields, or None if the file cannot be opened.
@@ -53,7 +60,7 @@ def extract_metadata(image_path: Path) -> Optional[dict[str, Any]]:
     image_path = Path(image_path)
 
     try:
-        file_meta = _extract_file_meta(image_path)
+        file_meta = _extract_file_meta(image_path, raw_dir=raw_dir)
         image_meta = _extract_image_meta(image_path)
         exif_meta = _extract_exif(image_path)
     except Exception as exc:
@@ -67,11 +74,22 @@ def extract_metadata(image_path: Path) -> Optional[dict[str, Any]]:
 # Private helpers
 # ---------------------------------------------------------------------------
 
-def _extract_file_meta(path: Path) -> dict[str, Any]:
+def _extract_file_meta(
+    path: Path,
+    raw_dir: Path | None = None,
+) -> dict[str, Any]:
     """File-level metadata — no Pillow needed."""
     stat = path.stat()
+    # Store a portable relative path (e.g. "digital/2026/canon-500d/session/photo.jpg")
+    # so the manifest works across environments (Windows, Linux, Docker).
+    if raw_dir is not None:
+        rel = path.relative_to(raw_dir)
+        # Always use forward slashes for cross-platform portability
+        stored_path = rel.as_posix()
+    else:
+        stored_path = str(path)
     return {
-        "absolute_path": str(path),
+        "relative_path": stored_path,
         "filename": path.name,
         "extension": path.suffix.lower(),
         "size_bytes": stat.st_size,

@@ -54,6 +54,7 @@ def run_embeddings(
     """
     emb_cfg = config["embeddings"]
     qdr_cfg = config["qdrant"]
+    raw_dir = Path(config["data"]["raw_dir"]).resolve()
 
     # 1. Load manifest
     manifest_path = _manifest_path(config)
@@ -112,7 +113,7 @@ def run_embeddings(
     yielded = 0
 
     with tqdm(total=total_to_iter, desc="Embedding", unit="img") as pbar:
-        for records, images, payloads in iter_batches(to_process, batch_size=batch_size):
+        for records, images, payloads in iter_batches(to_process, batch_size=batch_size, raw_dir=raw_dir):
             yielded += len(images)
             file_hashes = [r["file_hash"] for r in records]
 

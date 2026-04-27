@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # added by the pipeline. Keep this list small — payload bloat slows search.
 PAYLOAD_COLUMNS: tuple[str, ...] = (
     "file_hash",
-    "absolute_path",
+    "relative_path",
     "filename",
     "medium",
     "camera",
@@ -79,9 +79,20 @@ def load_image(path: str | Path) -> Image.Image:
     return img.convert("RGB")
 
 
+def resolve_path(relative_path: str, raw_dir: Path) -> Path:
+    """Reconstruct an absolute path from a manifest-stored relative path.
+
+    The manifest stores forward-slash POSIX paths for portability (e.g.
+    ``digital/2026/canon-500d/session/photo.jpg``). This function joins
+    them with the configured ``raw_dir`` and returns a native ``Path``.
+    """
+    return raw_dir / Path(relative_path)
+
+
 def iter_batches(
     df: pd.DataFrame,
     batch_size: int,
+    raw_dir: Path,
 ) -> Iterator[tuple[list[dict[str, Any]], list[Image.Image], list[dict[str, Any]]]]:
     """Yield (records, loaded_images, payloads) tuples of size <= batch_size.
 
@@ -93,12 +104,13 @@ def iter_batches(
     payloads: list[dict[str, Any]] = []
 
     for _, row in df.iterrows():
+        photo_path = resolve_path(row["relative_path"], raw_dir)
         try:
-            img = load_image(row["absolute_path"])
+            img = load_image(photo_path)
         except Exception as exc:
             logger.warning(
                 "Skipping corrupted/unreadable image %s: %s",
-                row.get("absolute_path", "<unknown>"),
+                photo_path,
                 exc,
             )
             continue

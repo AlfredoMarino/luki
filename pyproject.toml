@@ -15,7 +15,17 @@ dependencies = [
     "qdrant-client>=1.12",
     "tqdm",
     "gradio>=4.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "python-multipart",
+    "httpx",
 ]
+
+[project.scripts]
+luki-etl   = "luki.etl.cli:main"
+luki-embed = "luki.embeddings.__main__:main"
+luki-app   = "luki.app.__main__:main"
+luki-api   = "luki.api.__main__:main"
 
 [project.optional-dependencies]
 dev = ["pytest", "black", "ruff", "nbclient", "nbformat"]

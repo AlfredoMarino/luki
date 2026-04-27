@@ -19,7 +19,8 @@ import numpy as np
 import yaml
 from qdrant_client.http import models as qmodels
 
-from luki.embeddings.dataset import load_image, load_manifest
+from luki.embeddings.dataset import load_image, load_manifest, resolve_path
+from luki.utils.paths import config_path
 from luki.embeddings.model import DinoV3Embedder
 from luki.embeddings.store import QdrantStore
 
@@ -36,7 +37,7 @@ def format_row(score: float, payload: dict) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="config/base.yaml")
+    parser.add_argument("--config", default=str(config_path()))
     parser.add_argument(
         "--photo-index",
         type=int,
@@ -62,6 +63,7 @@ def main() -> None:
     with open(args.config, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
+    raw_dir = Path(config["data"]["raw_dir"]).resolve()
     manifest_path = Path(config["data"]["processed_dir"]).resolve() / "manifest.parquet"
     df = load_manifest(manifest_path)
 
@@ -78,7 +80,8 @@ def main() -> None:
     print(f"  medium   : {query_row['medium']}")
     print(f"  camera   : {query_row['camera']}")
     print(f"  session  : {query_row.get('session_name') or query_row.get('roll_date')}")
-    print(f"  path     : {query_row['absolute_path']}")
+    photo_path = resolve_path(query_row["relative_path"], raw_dir)
+    print(f"  path     : {photo_path}")
     print("=" * 80)
 
     # Embed the query
@@ -86,7 +89,7 @@ def main() -> None:
         model_name=config["embeddings"]["model_name"],
         device=config["embeddings"].get("device", "auto"),
     )
-    img = load_image(query_row["absolute_path"])
+    img = load_image(photo_path)
     query_vector = embedder.embed([img])[0]  # (1024,)
 
     # Connect to Qdrant

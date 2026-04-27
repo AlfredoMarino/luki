@@ -78,7 +78,7 @@ def run_etl(config: dict) -> pd.DataFrame:
             continue
 
         # Extract file + EXIF metadata
-        file_meta = extract_metadata(path)
+        file_meta = extract_metadata(path, raw_dir=raw_dir)
         if file_meta is None:
             logger.warning(f"Could not read image — skipping {path}")
             failed.append({"path": str(path), "reason": "unreadable_image"})
@@ -168,7 +168,8 @@ if __name__ == "__main__":
         datefmt="%H:%M:%S",
     )
 
-    with open("config/base.yaml") as f:
+    from luki.utils.paths import config_path
+    with open(config_path()) as f:
         config = yaml.safe_load(f)
 
     df = run_etl(config)

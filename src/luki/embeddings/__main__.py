@@ -9,6 +9,7 @@ import sys
 import yaml
 
 from luki.embeddings.pipeline import run_embeddings
+from luki.utils.paths import config_path
 
 
 def main() -> int:
@@ -18,7 +19,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--config",
-        default="config/base.yaml",
+        default=str(config_path()),
         help="Path to the YAML config (default: config/base.yaml)",
     )
     parser.add_argument(

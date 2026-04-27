@@ -8,3 +8,51 @@ services:
     volumes:
       - ./data/qdrant:/qdrant/storage
     restart: unless-stopped
+
+  api:
+    build: .
+    container_name: luki-api
+    command: ["luki-api", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - hf-cache:/root/.cache/huggingface
+    environment:
+      - LUKI_QDRANT_URL=http://qdrant:6334
+      - HF_TOKEN=${HF_TOKEN}
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+    # Healthcheck lets the app service wait for DINOv3 to finish loading
+    # (~30s on CPU) instead of failing on a cold `compose up`.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3); sys.exit(0)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+
+  app:
+    # Pure HTTP client of the API — no model, no Qdrant connection, no HF access.
+    build: .
+    container_name: luki-app
+    command: ["luki-app", "--host", "0.0.0.0", "--port", "7860"]
+    ports:
+      - "7860:7860"
+    environment:
+      # Internal URL for server-side httpx calls (Gradio container → API container).
+      - LUKI_API_URL=http://api:8000
+      # Browser-facing URL for <img src=...> in the rendered HTML. The browser
+      # runs on the host and can't resolve the internal `api` hostname, so we
+      # must hand it the host-mapped port instead.
+      - LUKI_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  hf-cache:
