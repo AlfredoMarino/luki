@@ -26,9 +26,10 @@ luki-etl   = "luki.etl.cli:main"
 luki-embed = "luki.embeddings.__main__:main"
 luki-app   = "luki.app.__main__:main"
 luki-api   = "luki.api.__main__:main"
+luki-eval  = "luki.eval.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest", "black", "ruff", "nbclient", "nbformat"]
+dev = ["pytest", "black", "ruff", "nbclient", "nbformat", "matplotlib"]
 
 [tool.pytest.ini_options]
 markers = [

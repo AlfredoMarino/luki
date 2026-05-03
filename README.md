@@ -77,6 +77,7 @@ docker compose up -d
 | `luki-embed` | Generate embeddings + upsert to Qdrant | `--config PATH`, `--force`, `--limit N` |
 | `luki-app` | Launch Gradio UI | `--host`, `--port`, `--share` |
 | `luki-api` | Launch FastAPI server | `--host`, `--port`, `--reload` |
+| `luki-eval` | Run evaluation suite (see Evaluation section below) | `--task`, `--model`, `--top-k`, `--seed`, `--out` |
 
 All commands also work as `python -m luki.{etl.cli,embeddings,app,api}`.
 
@@ -91,6 +92,40 @@ All commands also work as `python -m luki.{etl.cli,embeddings,app,api}`.
 | `POST` | `/search/by-index` | Search by dataset index (JSON: `{index, top_k}`) |
 | `POST` | `/search/by-image` | Upload image → find similar (multipart form) |
 | `POST` | `/search/filtered` | Upload image + metadata filters (multipart form) |
+
+## Evaluation
+
+LUKI ships with a quantitative evaluation of its embedding quality so the choice of DINOv3 over CLIP / SigLIP is *defensible with numbers*, not aesthetic preference. Two complementary tasks measure two different properties of the embedding space:
+
+| Task | What it tests | Relevance signal |
+|---|---|---|
+| **Augmentation invariance** | Does the model embed augmented copies of the same photo near the original? | The original is the only relevant doc per query (no proxy bias). |
+| **Roll hold-out** | Does the model cluster photos a human would call "from the same trip"? | Same `roll_tags` value (a weak metadata proxy). |
+
+Both run via brute-force cosine over an in-memory embedding matrix (the corpus is ~200 photos, ~1 MB at 1024 dims) — no Qdrant round-trip per query, and the same runner serves all three models without re-indexing.
+
+### Headline numbers
+
+Run on the 205-photo reference corpus. CIs are 95% bootstraps over per-query results (10k resamples). See `notebooks/03e_model_comparison.ipynb` for the full analysis.
+
+| Model | dim | Holdout AP | Holdout P@10 | Augmentation R@1 |
+|---|---|---|---|---|
+| DINOv3-ViT-L | 1024 | 0.180 [0.17, 0.19] | 0.421 [0.39, 0.45] | **0.990** [0.97, 1.00] |
+| **CLIP-ViT-B/32** | 512 | **0.219** [0.20, 0.23] | **0.495** [0.47, 0.52] | 0.969 [0.94, 0.99] |
+| SigLIP-base/16 | 768 | **0.219** [0.20, 0.24] | 0.476 [0.45, 0.51] | **0.990** [0.97, 1.00] |
+
+**Reading the table.** DINOv3 wins augmentation invariance — that's its training objective, so this is a sanity check, not a verdict. CLIP and SigLIP win the roll-task: their image–text contrastive training induces *semantic* grouping that happens to align with how rolls are organized (one trip = one roll = related scenes). For LUKI's product story ("find the rest of my trip"), CLIP is the better default — but DINOv3 stays competitive and is more robust to perturbation. Bootstrap CIs overlap between CLIP and SigLIP on both tasks; the difference between them is not statistically distinguishable on this corpus.
+
+> Reproduce: `luki-eval --task all --model all` writes a JSON per (model, task) under `data/processed/eval/` and prints the summary table. First run downloads CLIP (~600 MB) and SigLIP (~875 MB) into the HF cache; subsequent runs use cached corpus embeddings (~1 MB each).
+
+### Limitations (named honestly)
+
+- **Roll labels are weak.** Same-roll photos are correlated by *time* (one developer date) and *camera*, which usually but not always implies visual similarity. False positives (unrelated subjects in the same roll) and false negatives (similar subjects across rolls) both depress AP. We report alongside Recall@k so you can read which way the noise pulls.
+- **The 19 digital photos have no roll.** They are silently excluded from the holdout task — *not* averaged in as zeros, which would understate the model. The augmentation task evaluates them.
+- **Bootstrap CIs assume i.i.d. queries.** Within-roll queries are correlated; the cluster bootstrap (resample whole rolls) would be more honest. We use the simpler resample-photos variant; CIs are mildly optimistic.
+- **Sample size.** ~186 holdout queries × 5 rolls. Enough to claim trends, not enough to claim small differences (overlapping CIs ≠ statistically distinguishable).
+
+The notebook series `03a–03e` walks through every choice above with a senior-track teaching narrative.
 
 ## Project structure
 
