@@ -19,6 +19,8 @@ dependencies = [
     "uvicorn[standard]>=0.29",
     "python-multipart",
     "httpx",
+    "scikit-learn>=1.3",
+    "umap-learn>=0.5",
 ]
 
 [project.scripts]
